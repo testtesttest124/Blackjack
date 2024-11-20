@@ -22,8 +22,12 @@ local startGame
 
 local function drawCard(deck, hand)
 	local card = table.remove(deck)
-	table.insert(hand, card)
-	print("[DEBUG] Drawn card:", card.Value, card.Suit)
+	if card then
+		table.insert(hand, card)
+		print("[DEBUG] Drawn card:", card.Value, card.Suit)
+	else
+		warn("Deck is empty, cannot draw card")
+	end
 end
 
 local function createDeck()
@@ -46,29 +50,29 @@ local function shuffleDeck(deck)
 end
 
 local function calculateHandValue(hand)
-	if type(hand) ~= "table" then
-		warn("Invalid hand provided to calculateHandValue. Expected table, got " .. type(hand))
-		return 0
-	end
+    if type(hand) ~= "table" then
+        warn("Invalid hand provided to calculateHandValue. Expected table, got " .. type(hand))
+        return 0
+    end
 
-	local value, aces = 0, 0
-	for _, card in ipairs(hand) do
-		print("[DEBUG] Calculating card value:", card.Value, card.Suit)
-		if card.Value == "A" then
-			aces = aces + 1
-			value = value + 11
-		elseif card.Value == "K" or card.Value == "Q" or card.Value == "J" then
-			value = value + 10
-		else
-			value = value + tonumber(card.Value)
-		end
-	end
-	while value > 21 and aces > 0 do
-		value = value - 10
-		aces = aces - 1
-	end
-	print("[DEBUG] Hand value calculated:", value)
-	return value
+    local value, aces = 0, 0
+    for _, card in ipairs(hand) do
+        print("[DEBUG] Calculating card value:", card.Value, card.Suit)
+        if card.Value == "A" then
+            aces = aces + 1
+            value = value + 11
+        elseif card.Value == "K" or card.Value == "Q" or card.Value == "J" then
+            value = value + 10
+        else
+            value = value + tonumber(card.Value)
+        end
+    end
+    while value > 21 and aces > 0 do
+        value = value - 10
+        aces = aces - 1
+    end
+    print("[DEBUG] Hand value calculated:", value)
+    return value
 end
 
 local function updateDealerHandDisplay(dealerHand)
@@ -137,6 +141,25 @@ local function resetGame()
 		return
 	end
 
+	-- Reset all player hand displays
+	for seatIndex, seat in ipairs(seats) do
+		local seatPath = "Seat" .. tostring(seatIndex)
+		local seatHand = game.Workspace.Games.Blackjack.Hand:FindFirstChild(seatPath)
+		if seatHand then
+			local seatBillboardGui = seatHand:FindFirstChild("BillboardGui")
+			if seatBillboardGui then
+				local playerTextLabel = seatBillboardGui:FindFirstChild("TextLabel")
+				if playerTextLabel then
+					playerTextLabel.Text = "0"
+				end
+			end
+		end
+	end
+
+	-- Reset dealer hand display
+	local dealerTextLabel = game.Workspace.Games.Blackjack.Hand.Dealer.BillboardGui.TextLabel
+	dealerTextLabel.Text = "0"
+
 	if #seatedPlayers >= 1 then
 		local countdownTime = 5
 		while countdownTime > 0 do
@@ -166,7 +189,32 @@ startGame = function()
 		local dealerHand = {table.remove(deck)}
 		updateDealerHandDisplay(dealerHand)
 
-		local playerHands = {}
+		local playerHands = {}  -- Declared as local variable
+		local playerSeats = {}
+		local turnIndex = 1
+		local currentConnection
+		local finishedPlayers = 0
+		
+		-- Reset all player hand displays to zero
+		for seatIndex, seat in ipairs(seats) do
+			local seatPath = "Seat" .. tostring(seatIndex)
+			local seatHand = game.Workspace.Games.Blackjack.Hand:FindFirstChild(seatPath)
+			if seatHand then
+				local seatBillboardGui = seatHand:FindFirstChild("BillboardGui")
+				if seatBillboardGui then
+					local playerTextLabel = seatBillboardGui:FindFirstChild("TextLabel")
+					if playerTextLabel then
+						playerTextLabel.Text = "0"
+					end
+				end
+			end
+		end
+
+		local deck = createDeck()
+		shuffleDeck(deck)
+		local dealerHand = {table.remove(deck)}
+		updateDealerHandDisplay(dealerHand)
+
 		local playerSeats = {}
 		local turnIndex = 1
 		local currentConnection
